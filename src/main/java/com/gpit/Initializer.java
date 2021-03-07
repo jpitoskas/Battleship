@@ -17,13 +17,14 @@ import java.util.Set;
 
 public class Initializer {
 
-    private int scenarioID;
+    private Integer scenarioID;
     private Game game;
     private ArrayList<Ship> playerShips;
     private ArrayList<Ship> enemyShips;
 
 
     public Initializer() {
+//        this.scenarioID = null;
         this.game = new Game(new ArrayList<Ship>(), new ArrayList<Ship>());
     }
 
@@ -179,6 +180,10 @@ public class Initializer {
         }
 
 
+    }
+
+    public Integer getScenarioID() {
+        return scenarioID;
     }
 
     public Game getGame() {

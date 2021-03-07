@@ -15,9 +15,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
@@ -26,23 +24,20 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Stack;
+import java.util.Random;
 
 import static java.lang.Math.min;
 
 public class BattleshipApp extends Application {
     private VBox screen;
-    private boolean hasStarted;
+    private boolean playerFirst = true;
+    private Label invalidShotLabel;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
 
         Initializer init = new Initializer();
         this.screen = new VBox();
-        this.hasStarted = false;
-
-
-
 
 
         MenuBar menuBar = new MenuBar();
@@ -69,6 +64,12 @@ public class BattleshipApp extends Application {
         detailsMenu.getItems().addAll(menuEnemyShipsItem, menuPlayerShotsItem, menuEnemyShotsItem);
 
         menuBar.getMenus().addAll(applicationMenu, detailsMenu);
+
+
+        invalidShotLabel = new Label("Invalid Shot! Try another shooting position.");
+        invalidShotLabel.setAlignment(Pos.CENTER);
+        invalidShotLabel.setMaxSize(Double.MAX_VALUE,Double.MAX_VALUE);
+        invalidShotLabel.setTextFill(Color.RED);
 
 
 
@@ -132,6 +133,7 @@ public class BattleshipApp extends Application {
             try {
                 init.initializeGame(Integer.parseInt(loadDialog.getEditor().getText()));
                 init.checkValidGame();
+                screen.getChildren().remove(invalidShotLabel);
                 screen.getChildren().remove(screen.getChildren().size()-1);
                 screen.getChildren().remove(screen.getChildren().size()-1);
                 screen.getChildren().remove(screen.getChildren().size()-1);
@@ -164,22 +166,36 @@ public class BattleshipApp extends Application {
 
         menuStartItem.setOnAction(event -> {
 
-
-
             try {
-                init.initializeGame();
-                screen.getChildren().remove(screen.getChildren().size()-1);
-                screen.getChildren().remove(screen.getChildren().size()-1);
-                screen.getChildren().remove(screen.getChildren().size()-1);
-                init.getGame().setRound(0);
-                init.getGame().nextRound();
-                play(init);
+                if (init.getScenarioID() == null) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Error");
+                    alert.setHeaderText("");
+                    alert.setContentText("No Scenario loaded!");
+                    alert.showAndWait();
+                }
+                else {
+                    init.initializeGame();
+                    screen.getChildren().remove(invalidShotLabel);
+                    screen.getChildren().remove(screen.getChildren().size() - 1);
+                    screen.getChildren().remove(screen.getChildren().size() - 1);
+                    screen.getChildren().remove(screen.getChildren().size() - 1);
+                    init.getGame().setRound(0);
+                    init.getGame().nextRound();
+                    playerFirst = (new Random()).nextBoolean();
+                    String first = playerFirst ? "Player" : "Enemy";
+                    play(init);
 
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Start Game");
-                alert.setHeaderText("");
-                alert.setContentText("The game has started. Prepare for battle!");
-                alert.show();
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Start Game");
+                    alert.setHeaderText("");
+                    alert.setContentText("The game has started. " + first + " plays first. Prepare for battle!");
+                    alert.showAndWait();
+
+                    if (!playerFirst) {
+                        init.getGame().enemyRoundAI();
+                    }
+                }
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -187,8 +203,6 @@ public class BattleshipApp extends Application {
                 e.printStackTrace();
             }
 
-//            VBox vb = play(init);
-//            primaryStage.setScene(new Scene(vb, 860,540));
         });
 
         menuExitItem.setOnAction(event -> Platform.exit());
@@ -206,8 +220,6 @@ public class BattleshipApp extends Application {
     public void play(Initializer init){
 
         Game game = init.getGame();
-
-
 
 
         HBox playerAxisX = new HBox();
@@ -296,17 +308,32 @@ public class BattleshipApp extends Application {
         screenCenter.setSpacing(50);
 
 
-        ComboBox<Integer> insertPosX = new ComboBox<>();
-        insertPosX.getItems().addAll(0,1,2,3,4,5,6,7,8,9);
+        ComboBox<String> insertPosX = new ComboBox<>();
+        insertPosX.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
 
-        ComboBox<Integer> insertPosY = new ComboBox<>();
-        insertPosY.getItems().addAll(0,1,2,3,4,5,6,7,8,9);
+        ComboBox<String> insertPosY = new ComboBox<>();
+        insertPosY.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
 
-        //        insertPosX.setValue(0);
-        //        insertPosY.setValue(0);
+//        insertPosX.setValue("Column");
+//        insertPosY.setValue("Row");
+
+        insertPosX.setPrefWidth(100);
+        insertPosY.setPrefWidth(100);
 
 //        TextField insertPosX = new TextField();
 //        TextField insertPosY = new TextField();
+
+        Label rowLabel = new Label("Row:");
+        rowLabel.setAlignment(Pos.CENTER);
+        rowLabel.setMaxSize(Double.MAX_VALUE,Double.MAX_VALUE);
+
+        Label columnLabel = new Label("Column:");
+        columnLabel.setAlignment(Pos.CENTER);
+        columnLabel.setMaxSize(Double.MAX_VALUE,Double.MAX_VALUE);
+
+
+
+
 
         Button button = new Button("Shoot");
         if (game.hasStarted() && !game.hasEnded()) {
@@ -317,13 +344,18 @@ public class BattleshipApp extends Application {
         }
         button.setOnAction(event -> {
 
-            if (insertPosX.getValue() != null && insertPosY.getValue() !=null) {
-                int x = insertPosX.getSelectionModel().getSelectedItem();
-                int y = insertPosY.getSelectionModel().getSelectedItem();
+            screen.getChildren().remove(invalidShotLabel);
+
+            if (!insertPosX.getValue().equals("Column") && !insertPosY.getValue().equals("Row")) {
+
+                int x = Integer.parseInt(insertPosX.getSelectionModel().getSelectedItem());
+                int y = Integer.parseInt(insertPosY.getSelectionModel().getSelectedItem());
 
                 if (game.isValidShot(x,y, "Player")) {
 
-                    init.getGame().nextRound();
+                    if (playerFirst) {
+                        init.getGame().nextRound();
+                    }
 
                     game.playerRound(x, y);
 
@@ -339,9 +371,14 @@ public class BattleshipApp extends Application {
                             alert.setContentText("It's a Draw.");
                         }
                         alert.show();
+                        return;
                     }
 
                     game.enemyRoundAI();
+
+                    if (!playerFirst) {
+                        init.getGame().nextRound();
+                    }
 
                     if (game.hasEnded()) {
                         button.setDisable(true);
@@ -355,27 +392,37 @@ public class BattleshipApp extends Application {
                             alert.setContentText("It's a Draw.");
                         }
                         alert.show();
+                        return;
                     }
 
 //                    ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 //                    executorService.schedule(game::enemyRoundAI, 1, TimeUnit.SECONDS);
+
+                }
+                else {
+                    screen.getChildren().add(invalidShotLabel);
+//                    button.setBorder(new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
                 }
 
-                insertPosX.setValue(null);
-                insertPosY.setValue(null);
-
-
             }
+//            insertPosX.getItems().add("Column");
+            insertPosX.setValue(null);
+//            insertPosX.getItems().remove("Column");
+//            insertPosY.getItems().add("Row");
+            insertPosY.setValue(null);
+
         });
 
         HBox screenBottom = new HBox();
-        screenBottom.getChildren().addAll(insertPosX, insertPosY, button);
+        screenBottom.getChildren().addAll(rowLabel, insertPosY, columnLabel, insertPosX, button);
         screenBottom.setAlignment(Pos.CENTER);
         screenBottom.setSpacing(50);
 
         Label roundLabel = game.getRoundLabel();
 
         screen.getChildren().addAll(roundLabel, screenCenter, screenBottom);
+
+
     }
 
     public void showAlert(String message, String id) {
